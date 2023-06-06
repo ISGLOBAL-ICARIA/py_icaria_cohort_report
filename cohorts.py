@@ -10,6 +10,7 @@ import math
 import numpy as np
 import pandas
 import params
+import redcap
 
 import pydrive
 
@@ -21,7 +22,73 @@ drive = GoogleDrive(gauth)
 
 #gauth.LocalWebserverAuth()
 
-def cohort_stopping_sistem(redcap_project,nletter,projectkey,date_='2023-05'):
+def cohort_stopping_sistem(redcap_project,nletter,projectkey,date_='2023-06'):
+    """
+    :param redcap_project_df: Data frame containing all data exported from the REDCap project
+    :type redcap_project_df: pandas.DataFrame
+
+    :return: List of record ids per letter
+    """
+    if "." in str(projectkey):
+        cohorts_from_this_months = pd.DataFrame()
+        for el in params.subprojects[str(projectkey).split(".")[0]]:
+            print(el)
+            project = redcap.Project(params.URL, params.TRIAL_PROJECTS[el])
+            df = project.export_records(format='df', fields=params.ALERT_LOGIC_FIELDS)
+            xres = df.reset_index()
+            actual_cohorts = xres[xres['redcap_event_name']=='cohort_after_mrv_2_arm_1'][['record_id','ch_his_date']]
+            letters_ = xres[(xres['record_id'].isin(list(actual_cohorts['record_id'].unique())))&(xres['redcap_event_name']=='epipenta1_v0_recru_arm_1')][['record_id','int_random_letter']]
+            STOP = False
+            actual_cohorts = actual_cohorts.dropna()
+            if actual_cohorts.empty:
+                pass
+            else:
+                records_dates_=actual_cohorts[actual_cohorts['ch_his_date'].str.contains(date_)]
+                cohorts_from_this_months_subproj = pd.merge(records_dates_,letters_, on='record_id')
+
+                if cohorts_from_this_months.empty:
+                    cohorts_from_this_months = cohorts_from_this_months_subproj
+                    print("s")
+                else:
+                    print('else')
+                    cohorts_from_this_months = pd.concat([cohorts_from_this_months,cohorts_from_this_months_subproj])
+                print(cohorts_from_this_months)
+
+        if cohorts_from_this_months.empty:
+            return STOP
+
+    else:
+        xres = redcap_project.reset_index()
+        actual_cohorts = xres[xres['redcap_event_name']=='cohort_after_mrv_2_arm_1'][['record_id','ch_his_date']]
+        letters_ = xres[(xres['record_id'].isin(list(actual_cohorts['record_id'].unique())))&(xres['redcap_event_name']=='epipenta1_v0_recru_arm_1')][['record_id','int_random_letter']]
+        STOP = False
+        if actual_cohorts.empty:
+            return STOP
+        #print(actual_cohorts)
+        actual_cohorts = actual_cohorts.dropna()
+        records_dates_=actual_cohorts[actual_cohorts['ch_his_date'].str.contains(date_)]
+        if projectkey == 'HF11' and date_=='2023-03':
+            records_dates_ = (records_dates_[~records_dates_['record_id'].isin([240,239])])
+        cohorts_from_this_months = pd.merge(records_dates_,letters_, on='record_id')
+
+
+    #print(cohorts_from_this_months.groupby('int_random_letter').count()['record_id'])
+    if len(cohorts_from_this_months.groupby('int_random_letter').count())==6 and sum(list(cohorts_from_this_months.groupby('int_random_letter').count()['record_id']>=nletter))==6: #False not in list(cohorts_from_this_months.groupby('int_random_letter').count()['record_id']>=nletter):
+        STOP = True
+        print ("It has been recruited all minimum participants per letter ("+str(nletter)+") and the alert for this HF needs to stop.")
+    elif len(cohorts_from_this_months.groupby('int_random_letter').count())>=2:
+        sum_ = 0
+        for el in cohorts_from_this_months.groupby('int_random_letter').count()['record_id']:
+            if el > nletter:
+                el = nletter
+            sum_+= el
+        nletter_comp = nletter + (nletter*6 - sum_)
+        if sum(list(cohorts_from_this_months.groupby('int_random_letter').count()['record_id']>=nletter_comp))>=4:
+            print("It has been recruited the minimum participants per letter + compensation (" + str(nletter) + ") in, at least, 4 letters, and the alert for this HF needs to stop.")
+            STOP = True
+    return STOP
+
+def cohort_stopping_sistem2(redcap_project,nletter,projectkey,date_='2023-06'):
     """
     :param redcap_project_df: Data frame containing all data exported from the REDCap project
     :type redcap_project_df: pandas.DataFrame
@@ -60,25 +127,30 @@ def cohort_stopping_sistem(redcap_project,nletter,projectkey,date_='2023-05'):
     return STOP
 
 
-
 def get_record_ids_range_age(redcap_data,min_age,max_age,date_='2023-05-01'):
     xre = redcap_data.reset_index()
     #end_date = datetime.strptime(date_, "%Y-%m-%d").date()
     end_date = datetime.strptime("2023-0"+str(date.today().month)+"-01", "%Y-%m-%d").date()
-    dob_count = 0
 
+    print(end_date)
+    dob_count = 0
     dobs = list(xre[xre['redcap_event_name'] == 'epipenta1_v0_recru_arm_1']['child_dob'])
     dob_df = pd.DataFrame(index=xre.record_id.unique(), columns=['dob_diff'])
-
+    print(dobs)
     for record_id in xre.record_id.unique():
-        start_date = datetime.strptime(dobs[dob_count], "%Y-%m-%d")
-        delta = relativedelta(end_date, start_date)
+        try:
+            start_date = datetime.strptime(dobs[dob_count], "%Y-%m-%d")
+            delta = relativedelta(end_date, start_date)
 
-        res_months = delta.months + (delta.years * 12)
-        if delta.days != 0:
-            res_months+=1
-        #print(record_id,start_date,end_date,delta,res_months,delta.months,delta.days)
-        dob_df.loc[record_id]['dob_diff']= res_months
+            res_months = delta.months + (delta.years * 12)
+            if delta.days != 0:
+                res_months+=1
+            #print(record_id,start_date,end_date,delta,res_months,delta.months,delta.days)
+            dob_df.loc[record_id]['dob_diff']= res_months
+        except:
+            print(record_id, dobs[dob_count])
+
+            pass
         dob_count += 1
     #print(dob_df[(dob_df['dob_diff']<= max_age) & (dob_df['dob_diff'] >= min_age)])
     return dob_df[(dob_df['dob_diff']<= max_age) & (dob_df['dob_diff'] >= min_age)].index
@@ -205,6 +277,8 @@ def excel_creation(project_key,redcap_project, redcap_project_df, excelwriter, s
         print("COHORT recruitment writen.")
         summary_sheet = summary_excel_creation(project_key,redcap_project_df,summarywriter,all_to_FW,summary,stop)
         return summary_sheet
+
+
 def summary_excel_creation(project_key,redcap_project_df,summarywriter,all_to_FW,summary,stop):
     summary_sheet = pd.DataFrame(index=[project_key],columns=['HF','A-elegible','A-recruited','B-elegible','B-recruited',
         'C-elegible','C-recruited','D-elegible','D-recruited','E-elegible','E-recruited','F-elegible','F-recruited','stop'])
