@@ -176,7 +176,11 @@ def get_record_ids_range_age(project_name,redcap_data,min_age,max_age,date_='202
             #print(record_id,start_date,end_date,delta,res_months,delta.months,delta.days)
             dob_df.loc[record_id]['dob_diff']= res_months
         except:
-            print("\t\t\tWARN:{} - {}: No dob: {}".format(project_name,record_id, dobs[dob_count]))
+            try:
+                print("\t\t\tWARN:{} - {}: No dob: {}".format(project_name,record_id, dobs[dob_count]))
+            except:
+                print("\t\t\tWARN:{} - {}: No dob".format(project_name,record_id))
+
         dob_count += 1
     return dob_df[(dob_df['dob_diff']<= max_age) & (dob_df['dob_diff'] >= min_age)].index
 
@@ -306,6 +310,12 @@ def excel_creation(project_key,redcap_project, redcap_project_df, excelwriter,ad
                     new_dict[k].append("")
             dict_to_excel = pd.DataFrame(data=new_dict)
             dict_to_excel.to_excel(excelwriter,project_key,index=False)
+
+        if additional:
+            print(project_key)
+            file_to_drive_summary(project_key,dict_to_excel,tokens.drive_folder_additional,tokens.drive_file_additional,index_included=False)
+            print("Additional COHORT candidates added to the Google Sheet {} for sheet {}.".format(tokens.drive_file_additional,project_key))
+
         print("\tCOHORT recruitment sheet writen for {}\n".format(big_project_key))
         return dict_to_excel
 
@@ -350,16 +360,20 @@ def file_to_drive(file):
     gfile.Upload()  # Upload the file.
 
 
+def file_to_drive_summary(worksheet,df,drive_folder=tokens.drive_folder, title=tokens.drive_file_name,index_included=True):
+    gc = gspread.oauth(tokens.path_credentials)
+    sh = gc.open(title=title,folder_id=drive_folder)
+    set_with_dataframe(sh.worksheet(worksheet), df,include_index=index_included)
+
 def export_records_summary(project,project_key,fields_,filter_logic,final_df, month,min_age,max_age):
     try:
         df = project.export_records(format='df', fields=params.ALERT_LOGIC_FIELDS)
         df_cohorts = project.export_records(format='df', fields=fields_,filter_logic=filter_logic)
         df_cohorts = df_cohorts[df_cohorts['ch_his_date'].str.split("-", expand=True)[1]==month]
-        records_range_age = get_record_ids_range_age(df, min_age, max_age)
+        records_range_age = get_record_ids_range_age(project_key,df, min_age, max_age)
         df_cohorts_xres = df_cohorts.reset_index()
         df_cohorts_xres = df_cohorts_xres[df_cohorts_xres['record_id'].isin(list(records_range_age))]
         df_cohorts = df_cohorts_xres.set_index(['record_id','redcap_event_name'])
-        print(df_cohorts)
 
         letters = get_letter_df(project, project_key, df_cohorts)
         final_df = pd.concat([final_df, letters.T])
@@ -400,20 +414,14 @@ def cohort_summary_expected(month):
 
 
 def groups_preparation(group,expected,finished_list):
-    print(group)
     group = group.reset_index()
     group['index'] = group['index'].str.split(".").str[0]
     group = group.groupby('index').sum().astype(int)
     group['finished'] = finished_list.values()
-    print(group)
     group = pd.concat([group,expected]).sort_index()[['A','B','C','D','E','F','finished']]
     return group
 
 
-def file_to_drive_summary(worksheet,df,index_included=True):
-    gc = gspread.oauth(tokens.path_credentials)
-    sh = gc.open(title=tokens.drive_file_name,folder_id=tokens.drive_folder)
-    set_with_dataframe(sh.worksheet(worksheet), df,include_index=index_included)
 
 def additional_recruitments_from_another_hf(projects, mainproject,new_min_age,new_max_age):
     print("ADDITIONAL RECRUITMENT IN {} . . .".format(mainproject))
