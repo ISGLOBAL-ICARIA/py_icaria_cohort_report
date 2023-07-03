@@ -34,6 +34,7 @@ def GET_cohorts_from_this_month(redcap_project,projectkey, date_, min_age, max_a
             subprojects_to_check.append(el)
         cohorts_from_this_month = pd.DataFrame()
         for el in subprojects_to_check:
+            print(el)
             project = redcap.Project(params.URL, params.TRIAL_PROJECTS[el])
             df = project.export_records(format='df', fields=params.ALERT_LOGIC_FIELDS)
             xres = df.reset_index()
@@ -65,14 +66,15 @@ def GET_cohorts_from_this_month(redcap_project,projectkey, date_, min_age, max_a
     else:
         print("\t\tSearching for all cohort participants in the month {} and all subprojects on the {}".format(date_,projectkey.split(".")[0]))
 
+        hf13 = 0
+        if str(projectkey) == 'HF13' and date_ == '2023-06':
+            list_subprojects = ['HF13', 'HF16.01', 'HF16.02', 'HF16.03']
+            hf13 = 1
 
-        if "." in str(projectkey) or str(projectkey)=='HF13':
-            if str(projectkey) =='HF13' and date_=='2023-06':
-                list_subprojects = ['HF13','HF16.01','HF16.02','HF16.03']
-            else:
-                list_subprojects = params.subprojects[str(projectkey).split(".")[0]]
+        if "." in str(projectkey):
+            list_subprojects = params.subprojects[str(projectkey).split(".")[0]]
 
-
+        if "." in str(projectkey) or hf13 == 1:
             cohorts_from_this_month = pd.DataFrame()
             for el in list_subprojects:
                 project = redcap.Project(params.URL, params.TRIAL_PROJECTS[el])

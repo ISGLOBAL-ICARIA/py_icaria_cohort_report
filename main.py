@@ -20,6 +20,7 @@ __status__ = "Dev"
 
 if __name__ == '__main__':
     # Read the COHORT PARTICIPATNS AND CREATE GOOGLE SHEETS
+
     print("COHORT PENDING RECRUITMENTS SCRIPT.\n")
     writer = pd.ExcelWriter(params.EXCEL_PATH)
     writer_summary = pd.ExcelWriter(params.SUMMARY_PATH)
@@ -31,7 +32,6 @@ if __name__ == '__main__':
         if project_key == "HF13" and str(datetime.now().month) == "6":
             new_min_age = cohort_list_df[cohort_list_df['HF']=='HF13']['min_age'].values[0]
             new_max_age = cohort_list_df[cohort_list_df['HF']=='HF13']['max_age'].values[0]
-            addition = ['HF16.01', 'HF16.02', 'HF16.03']
             additional_list = cohorts.additional_recruitments_from_another_hf(['HF16.01', 'HF16.02', 'HF16.03'], 'HF13',new_min_age,new_max_age)
 
         cohort_list_df = pd.read_excel(params.COHORT_RECRUITMENT_PATH, str(datetime.now().month))
@@ -57,7 +57,7 @@ if __name__ == '__main__':
 #    writer_summary.close()
     writer.close()
     cohorts.file_to_drive(params.EXCEL_PATH)
-
+    """
     print("\n\nCOHORT SUMMARY SCRIPT\n")
     for month in ['06']:
         print("Getting actual cohorts for month {}".format(month))
@@ -80,7 +80,10 @@ if __name__ == '__main__':
                     max_age = cohort_list_df[cohort_list_df['HF'] == big_project_key]['max_age'].unique()[0]
                     nletter = cohort_list_df[cohort_list_df['HF'] == big_project_key]['target_letter'].unique()[0]
 
-                stop = cohorts.cohort_stopping_sistem(stop_df,nletter_list[project_key.split(".")[0]],project_key,date_="2023-"+month,min_age=min_age,max_age=max_age)
+                if project_key == "HF13" and month=='06':
+                    stop = cohorts.cohort_stopping_sistem(stop_df, nletter_list[project_key.split(".")[0]], project_key,date_="2023-" + month, min_age=min_age, max_age=max_age,additional=['HF13',['HF16.01', 'HF16.02', 'HF16.03']])
+                else:
+                    stop = cohorts.cohort_stopping_sistem(stop_df,nletter_list[project_key.split(".")[0]],project_key,date_="2023-"+month,min_age=min_age,max_age=max_age)
                 if project_key.split(".")[0] not in stop_dict:
                     stop_dict[project_key.split(".")[0]] = stop
                 else:
@@ -91,4 +94,5 @@ if __name__ == '__main__':
         group =cohorts.groups_preparation(group1_df,month_expected,stop_dict)
         print(group)
         print ("Writing the drive sheet . . .")
-        cohorts.file_to_drive_summary(month,group)
+#        cohorts.file_to_drive_summary(month,group)
+    """
