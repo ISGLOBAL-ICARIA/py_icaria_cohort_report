@@ -57,7 +57,7 @@ if __name__ == '__main__':
 #    writer_summary.close()
     writer.close()
     cohorts.file_to_drive(params.EXCEL_PATH)
-    """
+
     print("\n\nCOHORT SUMMARY SCRIPT\n")
     for month in ['06']:
         print("Getting actual cohorts for month {}".format(month))
@@ -95,4 +95,3 @@ if __name__ == '__main__':
         print(group)
         print ("Writing the drive sheet . . .")
 #        cohorts.file_to_drive_summary(month,group)
-    """

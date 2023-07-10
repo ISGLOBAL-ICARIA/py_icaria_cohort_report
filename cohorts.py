@@ -189,7 +189,7 @@ def get_record_ids_range_age(project_name,redcap_data,min_age,max_age,date_='202
 
 
 
-def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,projectkey,additional=False):
+def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,projectkey,max_age2=False, min_age2=False, additional=False):
 
     ## HAVING RECEIVED AT LEAST 4 DOSES OF SP
 
@@ -223,11 +223,18 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
     for el in list(record_id_only_4_doses):
         if el not in record_id_4_doses:
             record_id_4_doses.append(el)
-#    print(record_id_4_doses)
 
     ## RECORDS THAT MEET THE MAX-MIN AGE RANGE CRITERIA
-    records_range_age = get_record_ids_range_age(project_key,redcap_data, min_age, max_age)
-    cohorts_to_be_contacted = list(set(record_id_4_doses).intersection(list(records_range_age)))
+    records_range_age1 = get_record_ids_range_age(project_key,redcap_data, min_age, max_age)
+
+    records_range_age2 = get_record_ids_range_age(project_key,redcap_data, min_age2, max_age2)
+    print("\tGetting records from {} with age range [{}-{}] and 4th SP doses at least 15days from 4th dosis".format(projectkey,min_age2,max_age2))
+
+    records_range_age = list(records_range_age1)
+    for el in list(records_range_age2):
+        if el not in records_range_age:
+            records_range_age.append(el)
+    cohorts_to_be_contacted = list(set(records_range_age).intersection(list(record_id_4_doses)))
     # Find those participants deaths or migrated that can't be part of the list
     try:
         deaths = xres[(xres['redcap_event_name'] == 'end_of_fu_arm_1') & (~xres['death_reported_date'].isnull())][
@@ -253,6 +260,8 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
                                    (xres['redcap_event_name'] == 'epipenta1_v0_recru_arm_1')][
         ['record_id','study_number', 'int_random_letter']]
     all = letters_to_be_contacted[['record_id','study_number','int_random_letter']].reset_index(drop=True)
+    all['firsttrue'] = all['record_id'].isin(records_range_age1)
+    all = all.sort_values('firsttrue',ascending=False)
     all['Recruited'] = letters_to_be_contacted['record_id'].isin(list(already_cohorts)).values
     summary = letters_to_be_contacted.groupby('int_random_letter').count().rename(columns={'record_id':'eligible'})[['eligible']]
     letters_yet_to_be_contacted = letters_to_be_contacted[~letters_to_be_contacted['record_id'].isin(list(already_cohorts))].rename(columns={'record_id':'pending'}).groupby('int_random_letter')['pending']
@@ -283,6 +292,12 @@ def excel_creation(project_key,redcap_project, redcap_project_df, excelwriter,ad
         max_age = cohort_list_df[cohort_list_df['HF']==big_project_key]['max_age'].unique()[0]
         nletter = cohort_list_df[cohort_list_df['HF']==big_project_key]['target_letter'].unique()[0]
 
+        try:
+            min_age2 = cohort_list_df[cohort_list_df['HF'] == big_project_key]['min_age2'].unique()[0]
+            max_age2 = cohort_list_df[cohort_list_df['HF'] == big_project_key]['max_age2'].unique()[0]
+        except:
+            print("H")
+            pass
         if additional:
             min_age = additional[2]
             max_age = additional[3]
@@ -291,7 +306,8 @@ def excel_creation(project_key,redcap_project, redcap_project_df, excelwriter,ad
                                                            nletter=nletter,projectkey=project_key,additional=additional[:2])
         else:
             all_to_FW, summary, stop = get_record_ids_nc_cohort(project_key,redcap_project_df, max_age=max_age, min_age=min_age,
-                                                                nletter=nletter, projectkey=project_key,
+                                                                nletter=nletter, projectkey=project_key, min_age2=min_age2,
+                                                                max_age2=max_age2,
                                                                 additional=False)
 
         # CREATION OF THE WORKERSGET_cohorts_from_this_month EXCEL
@@ -352,7 +368,7 @@ def summary_excel_creation(project_key,redcap_project_df,summarywriter,all_to_FW
         dict_to_excel = pd.DataFrame(data=new_dict)
         dict_to_excel = dict_to_excel.reindex(sorted(dict_to_excel.columns), axis=1)
         dict_to_excel.to_excel(summarywriter, project_key, index=False)
-
+        print(summarywriter)
     return summary_sheet
 
 def file_to_drive(file):
