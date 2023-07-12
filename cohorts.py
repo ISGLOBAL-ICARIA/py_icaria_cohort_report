@@ -166,17 +166,22 @@ def get_record_ids_range_age(project_name,redcap_data,min_age,max_age,date_='202
     end_date = datetime.strptime("2023-0"+str(date.today().month)+"-01", "%Y-%m-%d").date()
     dob_count = 0
     dobs = list(xre[xre['redcap_event_name'] == 'epipenta1_v0_recru_arm_1']['child_dob'])
+    dobs = xre[xre['redcap_event_name'] == 'epipenta1_v0_recru_arm_1'][['record_id','child_dob']]
     dob_df = pd.DataFrame(index=xre.record_id.unique(), columns=['dob_diff'])
     for record_id in xre.record_id.unique():
+        #print(dobs[dobs['record_id'] == 11010002]['child_dob'])
         try:
-            start_date = datetime.strptime(dobs[dob_count], "%Y-%m-%d")
+            start_date = datetime.strptime(list(dobs[dobs['record_id'] == record_id]['child_dob'])[0], "%Y-%m-%d")
             delta = relativedelta(end_date, start_date)
 
             res_months = delta.months + (delta.years * 12)
+
             if delta.days != 0:
                 res_months+=1
             #print(record_id,start_date,end_date,delta,res_months,delta.months,delta.days)
             dob_df.loc[record_id]['dob_diff']= res_months
+           # print(record_id,start_date)
+
         except:
             try:
                 print("\t\t\tWARN:{} - {}: No dob: {}".format(project_name,record_id, dobs[dob_count]))
@@ -184,6 +189,7 @@ def get_record_ids_range_age(project_name,redcap_data,min_age,max_age,date_='202
                 print("\t\t\tWARN:{} - {}: No dob".format(project_name,record_id))
 
         dob_count += 1
+
     return dob_df[(dob_df['dob_diff']<= max_age) & (dob_df['dob_diff'] >= min_age)].index
 
 
@@ -234,6 +240,7 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
     for el in list(records_range_age2):
         if el not in records_range_age:
             records_range_age.append(el)
+    print(list(records_range_age))
     cohorts_to_be_contacted = list(set(records_range_age).intersection(list(record_id_4_doses)))
     # Find those participants deaths or migrated that can't be part of the list
     try:
@@ -252,7 +259,6 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
 
     # 6 CRITERIA: Participant is not completed
     completed_participants = xres[(xres['redcap_event_name']=='hhat_18th_month_of_arm_1')&(~xres['hh_date'].isnull())]['record_id'].unique()
-    #print(completed_participants)
     letters_to_be_contacted = xres[(xres['record_id'].isin(cohorts_to_be_contacted)) &
                                    (~xres['record_id'].isin(list(deaths))) &
                                    (~xres['record_id'].isin(list(migrated))) &
@@ -260,14 +266,13 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
                                    (xres['redcap_event_name'] == 'epipenta1_v0_recru_arm_1')][
         ['record_id','study_number', 'int_random_letter']]
     all = letters_to_be_contacted[['record_id','study_number','int_random_letter']].reset_index(drop=True)
+
+    all['Recruited'] = letters_to_be_contacted['record_id'].isin(list(already_cohorts)).values
     all['firsttrue'] = all['record_id'].isin(records_range_age1)
     all = all.sort_values('firsttrue',ascending=False)
-    all['Recruited'] = letters_to_be_contacted['record_id'].isin(list(already_cohorts)).values
     summary = letters_to_be_contacted.groupby('int_random_letter').count().rename(columns={'record_id':'eligible'})[['eligible']]
     letters_yet_to_be_contacted = letters_to_be_contacted[~letters_to_be_contacted['record_id'].isin(list(already_cohorts))].rename(columns={'record_id':'pending'}).groupby('int_random_letter')['pending']
-    #print(letters_yet_to_be_contacted.groups)
     already_cohorts_letters = xres[(xres['redcap_event_name']=='epipenta1_v0_recru_arm_1')&(xres['record_id'].isin(list(already_cohorts)))&(~xres['int_random_letter'].isnull())][['record_id','study_number','study_number','int_random_letter']].drop_duplicates().rename(columns={'record_id':'recruited'}).groupby('int_random_letter')['recruited']
-    #print(already_cohorts_letters.groups)
 
 
     summary=summary.join(already_cohorts_letters.count()).join(letters_yet_to_be_contacted.count())
@@ -311,7 +316,10 @@ def excel_creation(project_key,redcap_project, redcap_project_df, excelwriter,ad
                                                                 additional=False)
 
         # CREATION OF THE WORKERSGET_cohorts_from_this_month EXCEL
+        print(all_to_FW)
         tobe_recruited = all_to_FW[all_to_FW['Recruited']==False]
+        print(tobe_recruited)
+
         if stop==True:
             summ = summary.reset_index()
             summ=summ.rename(columns={'eligible':'No pending'})

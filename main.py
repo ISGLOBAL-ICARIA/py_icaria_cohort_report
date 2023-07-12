@@ -20,7 +20,7 @@ __status__ = "Dev"
 
 if __name__ == '__main__':
     # Read the COHORT PARTICIPATNS AND CREATE GOOGLE SHEETS
-    """
+
     print("COHORT PENDING RECRUITMENTS SCRIPT.\n")
     writer = pd.ExcelWriter(params.EXCEL_PATH)
     writer_summary = pd.ExcelWriter(params.SUMMARY_PATH)
@@ -57,9 +57,9 @@ if __name__ == '__main__':
 #    writer_summary.close()
     writer.close()
     cohorts.file_to_drive(params.EXCEL_PATH)
-   """
+
     print("\n\nCOHORT SUMMARY SCRIPT\n")
-    for month in ['06']:
+    for month in ['07']:
         print("Getting actual cohorts for month {}".format(month))
         stop_dict = {}
         group1_df = pd.DataFrame(columns=['A', 'B', 'C', 'D', 'E', 'F'])
@@ -89,7 +89,6 @@ if __name__ == '__main__':
                 else:
                     pass
                 group1_df = cohorts.export_records_summary(project,project_key,['study_number','ch_his_date','ch_rdt_date'],"[ch_his_date]!=''",group1_df,month,min_age,max_age).fillna(0)
-                print(group1_df)
         print ("Groups Preparation . . . ")
         group =cohorts.groups_preparation(group1_df,month_expected,stop_dict)
         print(group)
