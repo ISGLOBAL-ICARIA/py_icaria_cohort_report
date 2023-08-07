@@ -199,7 +199,7 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
 
     ## HAVING RECEIVED AT LEAST 4 DOSES OF SP
 
-    ## 1 CRITERIA: Having received at least 4 doses of SPcohort_stopping_sistem
+    ## 1 CRITERIA: Having received at least 4 doses of SP
     x = redcap_data
     xres = x.reset_index()
     print("\tGetting records from {} with age range [{}-{}] and 4th SP doses at least 15days from 4th dosis".format(projectkey,min_age,max_age))
@@ -224,11 +224,11 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
     except:
         record_id_only_4_doses = []
 
-    #print(record_id_only_4_doses)
     record_id_4_doses = list(record_id_4_doses)
     for el in list(record_id_only_4_doses):
         if el not in record_id_4_doses:
             record_id_4_doses.append(el)
+    #print(record_id_4_doses)
 
     ## RECORDS THAT MEET THE MAX-MIN AGE RANGE CRITERIA
     records_range_age1 = get_record_ids_range_age(project_key,redcap_data, min_age, max_age)
@@ -270,6 +270,7 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
     all['Recruited'] = letters_to_be_contacted['record_id'].isin(list(already_cohorts)).values
     all['firsttrue'] = all['record_id'].isin(records_range_age1)
     all = all.sort_values('firsttrue',ascending=False)
+    print(all)
     summary = letters_to_be_contacted.groupby('int_random_letter').count().rename(columns={'record_id':'eligible'})[['eligible']]
     letters_yet_to_be_contacted = letters_to_be_contacted[~letters_to_be_contacted['record_id'].isin(list(already_cohorts))].rename(columns={'record_id':'pending'}).groupby('int_random_letter')['pending']
     already_cohorts_letters = xres[(xres['redcap_event_name']=='epipenta1_v0_recru_arm_1')&(xres['record_id'].isin(list(already_cohorts)))&(~xres['int_random_letter'].isnull())][['record_id','study_number','study_number','int_random_letter']].drop_duplicates().rename(columns={'record_id':'recruited'}).groupby('int_random_letter')['recruited']
@@ -296,7 +297,7 @@ def excel_creation(project_key,redcap_project, redcap_project_df, excelwriter,ad
         min_age = cohort_list_df[cohort_list_df['HF']==big_project_key]['min_age'].unique()[0]
         max_age = cohort_list_df[cohort_list_df['HF']==big_project_key]['max_age'].unique()[0]
         nletter = cohort_list_df[cohort_list_df['HF']==big_project_key]['target_letter'].unique()[0]
-
+    #   print(cohort_list_df)
         try:
             min_age2 = cohort_list_df[cohort_list_df['HF'] == big_project_key]['min_age2'].unique()[0]
             max_age2 = cohort_list_df[cohort_list_df['HF'] == big_project_key]['max_age2'].unique()[0]
@@ -316,9 +317,9 @@ def excel_creation(project_key,redcap_project, redcap_project_df, excelwriter,ad
                                                                 additional=False)
 
         # CREATION OF THE WORKERSGET_cohorts_from_this_month EXCEL
-        print(all_to_FW)
+#        print(all_to_FW)
         tobe_recruited = all_to_FW[all_to_FW['Recruited']==False]
-        print(tobe_recruited)
+#        print(tobe_recruited)
 
         if stop==True:
             summ = summary.reset_index()
@@ -428,8 +429,9 @@ def get_letter_df(project, project_key,df_):
 
 
 def cohort_summary_expected(month):
-    expected = pd.read_excel(params.cohorts_recruitment_path,sheet_name=str(int(month)))
+    expected = pd.read_excel(params.COHORT_RECRUITMENT_PATH,sheet_name=str(int(month)))
     expected = expected.set_index('HF')
+    print(expected)
     expected_index = [el+"_expected" for el in expected.index]
     final_expected = pd.DataFrame(index=expected_index, columns=['A','B','C','D','E','F','finished'])
     for k,el in expected.T.items():

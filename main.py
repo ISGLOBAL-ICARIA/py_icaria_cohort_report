@@ -56,10 +56,11 @@ if __name__ == '__main__':
 #    summary_sheet.to_excel(writer_summary, 'SUMMARY', index=False)
 #    writer_summary.close()
     writer.close()
+    """
     cohorts.file_to_drive(params.EXCEL_PATH)
 
     print("\n\nCOHORT SUMMARY SCRIPT\n")
-    for month in ['07']:
+    for month in ['08']:
         print("Getting actual cohorts for month {}".format(month))
         stop_dict = {}
         group1_df = pd.DataFrame(columns=['A', 'B', 'C', 'D', 'E', 'F'])
@@ -75,6 +76,7 @@ if __name__ == '__main__':
                 current_month = datetime.now().month
                 cohort_list_df = pd.read_excel(params.COHORT_RECRUITMENT_PATH, str(current_month))
                 big_project_key = project_key.split(".")[0]
+                print(big_project_key,cohort_list_df['HF'].unique())
                 if big_project_key.split(".")[0] in cohort_list_df['HF'].unique():
                     min_age = cohort_list_df[cohort_list_df['HF'] == big_project_key]['min_age'].unique()[0]
                     max_age = cohort_list_df[cohort_list_df['HF'] == big_project_key]['max_age'].unique()[0]
@@ -94,3 +96,5 @@ if __name__ == '__main__':
         print(group)
         print ("Writing the drive sheet . . .")
         cohorts.file_to_drive_summary(month,group)
+
+        """
