@@ -224,11 +224,11 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
     except:
         record_id_only_4_doses = []
 
+    #print(record_id_only_4_doses)
     record_id_4_doses = list(record_id_4_doses)
     for el in list(record_id_only_4_doses):
         if el not in record_id_4_doses:
             record_id_4_doses.append(el)
-    #print(record_id_4_doses)
 
     ## RECORDS THAT MEET THE MAX-MIN AGE RANGE CRITERIA
     records_range_age1 = get_record_ids_range_age(project_key,redcap_data, min_age, max_age)
@@ -240,7 +240,7 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
     for el in list(records_range_age2):
         if el not in records_range_age:
             records_range_age.append(el)
-    print(list(records_range_age))
+   # print(list(records_range_age))
     cohorts_to_be_contacted = list(set(records_range_age).intersection(list(record_id_4_doses)))
     # Find those participants deaths or migrated that can't be part of the list
     try:
@@ -270,7 +270,6 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
     all['Recruited'] = letters_to_be_contacted['record_id'].isin(list(already_cohorts)).values
     all['firsttrue'] = all['record_id'].isin(records_range_age1)
     all = all.sort_values('firsttrue',ascending=False)
-    print(all)
     summary = letters_to_be_contacted.groupby('int_random_letter').count().rename(columns={'record_id':'eligible'})[['eligible']]
     letters_yet_to_be_contacted = letters_to_be_contacted[~letters_to_be_contacted['record_id'].isin(list(already_cohorts))].rename(columns={'record_id':'pending'}).groupby('int_random_letter')['pending']
     already_cohorts_letters = xres[(xres['redcap_event_name']=='epipenta1_v0_recru_arm_1')&(xres['record_id'].isin(list(already_cohorts)))&(~xres['int_random_letter'].isnull())][['record_id','study_number','study_number','int_random_letter']].drop_duplicates().rename(columns={'record_id':'recruited'}).groupby('int_random_letter')['recruited']
