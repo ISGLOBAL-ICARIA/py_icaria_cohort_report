@@ -20,7 +20,6 @@ __status__ = "Dev"
 
 if __name__ == '__main__':
     # Read the COHORT PARTICIPATNS AND CREATE GOOGLE SHEETS
-
     print("COHORT PENDING RECRUITMENTS SCRIPT.\n")
     writer = pd.ExcelWriter(params.EXCEL_PATH)
     writer_summary = pd.ExcelWriter(params.SUMMARY_PATH)
@@ -56,7 +55,6 @@ if __name__ == '__main__':
 #    summary_sheet.to_excel(writer_summary, 'SUMMARY', index=False)
 #    writer_summary.close()
     writer.close()
-
     cohorts.file_to_drive(params.EXCEL_PATH)
 
     print("\n\nCOHORT SUMMARY SCRIPT\n")
@@ -66,7 +64,6 @@ if __name__ == '__main__':
         group1_df = pd.DataFrame(columns=['A', 'B', 'C', 'D', 'E', 'F'])
         month_expected,hf_per_month,nletter_list = cohorts.cohort_summary_expected(month)
         for project_key in params.TRIAL_PROJECTS:
-            print(project_key)
             if project_key.split(".")[0] in hf_per_month:
                 print("[{}] Getting COHORT records from {} for month {}...".format(datetime.now(), project_key,month))
                 project = redcap.Project(tokens.URL, tokens.REDCAP_PROJECTS_ICARIA[project_key])
@@ -76,23 +73,26 @@ if __name__ == '__main__':
                 current_month = datetime.now().month
                 cohort_list_df = pd.read_excel(params.COHORT_RECRUITMENT_PATH, str(current_month))
                 big_project_key = project_key.split(".")[0]
-                print(big_project_key,cohort_list_df['HF'].unique())
+                #print(big_project_key,cohort_list_df['HF'].unique())
                 if big_project_key.split(".")[0] in cohort_list_df['HF'].unique():
                     min_age = cohort_list_df[cohort_list_df['HF'] == big_project_key]['min_age'].unique()[0]
                     max_age = cohort_list_df[cohort_list_df['HF'] == big_project_key]['max_age'].unique()[0]
+                    min_age2 = cohort_list_df[cohort_list_df['HF'] == big_project_key]['min_age2'].unique()[0]
+                    max_age2 = cohort_list_df[cohort_list_df['HF'] == big_project_key]['max_age2'].unique()[0]
                     nletter = cohort_list_df[cohort_list_df['HF'] == big_project_key]['target_letter'].unique()[0]
 
                 if project_key == "HF13" and month=='06':
                     stop = cohorts.cohort_stopping_sistem(stop_df, nletter_list[project_key.split(".")[0]], project_key,date_="2023-" + month, min_age=min_age, max_age=max_age,additional=['HF13',['HF16.01', 'HF16.02', 'HF16.03']])
                 else:
-                    stop = cohorts.cohort_stopping_sistem(stop_df,nletter_list[project_key.split(".")[0]],project_key,date_="2023-"+month,min_age=min_age,max_age=max_age)
+                    stop = cohorts.cohort_stopping_sistem(stop_df,nletter_list[project_key.split(".")[0]],project_key,date_="2023-"+month,min_age=min_age2,max_age=max_age2)
                 if project_key.split(".")[0] not in stop_dict:
                     stop_dict[project_key.split(".")[0]] = stop
                 else:
                     pass
-                group1_df = cohorts.export_records_summary(project,project_key,['study_number','ch_his_date','ch_rdt_date'],"[ch_his_date]!=''",group1_df,month,min_age,max_age).fillna(0)
+                group1_df = cohorts.export_records_summary(project,project_key,['study_number','ch_his_date','ch_rdt_date'],"[ch_his_date]!=''",group1_df,month,min_age2,max_age2).fillna(0)
         print ("Groups Preparation . . . ")
         group =cohorts.groups_preparation(group1_df,month_expected,stop_dict)
         print(group)
         print ("Writing the drive sheet . . .")
         cohorts.file_to_drive_summary(month,group)
+    print("FINISHED .")

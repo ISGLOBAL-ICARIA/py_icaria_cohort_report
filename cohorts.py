@@ -107,6 +107,7 @@ def GET_cohorts_from_this_month(redcap_project,projectkey, date_, min_age, max_a
         else:
             xres = redcap_project.reset_index()
             actual_cohorts = xres[xres['redcap_event_name'] == 'cohort_after_mrv_2_arm_1'][['record_id', 'ch_his_date']]
+            #print(actual_cohorts)
             letters_ = xres[(xres['record_id'].isin(list(actual_cohorts['record_id'].unique()))) & (
                         xres['redcap_event_name'] == 'epipenta1_v0_recru_arm_1')][['record_id', 'int_random_letter']]
             STOP = False
@@ -118,9 +119,11 @@ def GET_cohorts_from_this_month(redcap_project,projectkey, date_, min_age, max_a
             if projectkey == 'HF11' and date_ == '2023-03':
                 records_dates_ = (records_dates_[~records_dates_['record_id'].isin([240, 239])])
             cohorts_from_this_month = pd.merge(records_dates_, letters_, on='record_id')
-
+            #print(cohorts_from_this_month)
             ## RECORDS THAT MEET THE MAX-MIN AGE RANGE CRITERIA
             records_range_age = get_record_ids_range_age(projectkey,redcap_project, min_age, max_age)
+            #print(min_age,max_age)
+            #print(records_range_age)
             cohorts_from_this_month = cohorts_from_this_month[
                 cohorts_from_this_month['record_id'].isin(records_range_age)]
 
@@ -137,6 +140,7 @@ def cohort_stopping_sistem(redcap_project,nletter,projectkey,date_="-".join(str(
     print("\tStopping System activated . . .")
     STOP = False
     cohorts_from_this_month = GET_cohorts_from_this_month(redcap_project,projectkey,date_,min_age,max_age,additional=additional)
+    #print(cohorts_from_this_month)
     try:
         if cohorts_from_this_month==False:
             STOP = cohorts_from_this_month
@@ -256,7 +260,6 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
     # Find those participants already recruited in the COHORTS substudy that can't be part of the list
     already_cohorts = xres[(xres['redcap_event_name'] == 'cohort_after_mrv_2_arm_1') & (~xres['ch_his_date'].isnull())][
         'record_id'].unique()
-
     # 6 CRITERIA: Participant is not completed
     completed_participants = xres[(xres['redcap_event_name']=='hhat_18th_month_of_arm_1')&(~xres['hh_date'].isnull())]['record_id'].unique()
     letters_to_be_contacted = xres[(xres['record_id'].isin(cohorts_to_be_contacted)) &
@@ -276,8 +279,9 @@ def get_record_ids_nc_cohort(project_key,redcap_data, max_age, min_age, nletter,
 
 
     summary=summary.join(already_cohorts_letters.count()).join(letters_yet_to_be_contacted.count())
-    stop=cohort_stopping_sistem(redcap_data,nletter=nletter,projectkey=projectkey,additional=additional,max_age=max_age,min_age=min_age)
+    stop=cohort_stopping_sistem(redcap_data,nletter=nletter,projectkey=projectkey,additional=additional,max_age=max_age2,min_age=min_age2)
     #print(stop)
+    #print(summary)
     if stop == True:
         summary['pending'] = 0
         #summary.loc['Rule'] = ["The recruitment for this HF-month needs to STOP.","","",""]
@@ -314,7 +318,6 @@ def excel_creation(project_key,redcap_project, redcap_project_df, excelwriter,ad
                                                                 nletter=nletter, projectkey=project_key, min_age2=min_age2,
                                                                 max_age2=max_age2,
                                                                 additional=False)
-
         # CREATION OF THE WORKERSGET_cohorts_from_this_month EXCEL
 #        print(all_to_FW)
         tobe_recruited = all_to_FW[all_to_FW['Recruited']==False]
@@ -376,7 +379,7 @@ def summary_excel_creation(project_key,redcap_project_df,summarywriter,all_to_FW
         dict_to_excel = pd.DataFrame(data=new_dict)
         dict_to_excel = dict_to_excel.reindex(sorted(dict_to_excel.columns), axis=1)
         dict_to_excel.to_excel(summarywriter, project_key, index=False)
-        print(summarywriter)
+        #print(summarywriter)
     return summary_sheet
 
 def file_to_drive(file):
@@ -430,7 +433,6 @@ def get_letter_df(project, project_key,df_):
 def cohort_summary_expected(month):
     expected = pd.read_excel(params.COHORT_RECRUITMENT_PATH,sheet_name=str(int(month)))
     expected = expected.set_index('HF')
-    print(expected)
     expected_index = [el+"_expected" for el in expected.index]
     final_expected = pd.DataFrame(index=expected_index, columns=['A','B','C','D','E','F','finished'])
     for k,el in expected.T.items():

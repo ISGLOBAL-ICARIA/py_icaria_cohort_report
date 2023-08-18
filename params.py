@@ -32,4 +32,4 @@ subprojects = {'HF01':['HF01.01','HF01.02'],'HF02':['HF02.01','HF02.02'],'HF08':
 ALERT_LOGIC_FIELDS = ['record_id','study_number','ch_his_date','int_random_letter','int_sp','int_date',
                       'child_dob','death_reported_date','mig_date','hh_date']
 
-cohorts_recruitment_path = '/home/abofill/Documents/github/py_icaria_cohort_report/cohort_recruitment.xlsx'
+#cohorts_recruitment_path = '/home/abofill/Documents/github/py_icaria_cohort_report/cohort_recruitment.xlsx'
