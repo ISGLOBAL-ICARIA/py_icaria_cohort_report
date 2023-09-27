@@ -58,7 +58,7 @@ if __name__ == '__main__':
     cohorts.file_to_drive(params.EXCEL_PATH)
 
     print("\n\nCOHORT SUMMARY SCRIPT\n")
-    for month in ['08']:
+    for month in ['10']:
         print("Getting actual cohorts for month {}".format(month))
         stop_dict = {}
         group1_df = pd.DataFrame(columns=['A', 'B', 'C', 'D', 'E', 'F'])
